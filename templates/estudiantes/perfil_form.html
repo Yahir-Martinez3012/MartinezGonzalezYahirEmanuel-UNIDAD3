@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Editar perfil · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+    <h1 class="h3 mb-3">Editar perfil</h1>
+    <div class="card shadow-sm"><div class="card-body p-4">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% include 'includes/formulario.html' %}
+            {% if form.instance.cv %}<p class="small text-muted">Ya tienes un CV guardado. Si subes uno nuevo, reemplazará al anterior.</p>{% endif %}
+            <button class="btn btn-utc" type="submit">Guardar cambios</button>
+            <a class="btn btn-outline-secondary" href="{% url 'estudiantes:perfil' %}">Cancelar</a>
+        </form>
+    </div></div>
+</div>
+{% endblock %}

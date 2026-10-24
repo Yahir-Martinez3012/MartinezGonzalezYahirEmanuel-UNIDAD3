@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}No encontrado · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+    <h1 class="display-6">404 · Página no encontrada</h1>
+    <p class="text-muted">La página o vacante que buscas no existe o ya no está disponible.</p>
+    <a href="{% url 'vacantes:lista' %}" class="btn btn-utc">Ver vacantes</a>
+</div>
+{% endblock %}

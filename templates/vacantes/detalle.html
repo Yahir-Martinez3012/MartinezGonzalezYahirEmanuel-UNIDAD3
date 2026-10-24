@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}{{ vacante.titulo }} · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'vacantes:lista' %}">Vacantes</a></li>
+        <li class="breadcrumb-item active">{{ vacante.titulo }}</li>
+    </ol></nav>
+
+    {% if vista_previa %}
+        <div class="alert alert-warning">Vista previa: esta vacante está <strong>{{ vacante.get_estado_display|lower }}</strong> y solo la ven tu empresa y los administradores.</div>
+    {% elif not vacante.esta_abierta %}
+        <div class="alert alert-secondary">Esta vacante ya no recibe postulaciones.</div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <h1 class="h2">{{ vacante.titulo }}</h1>
+            <p class="lead text-muted mb-2">{{ vacante.empresa.nombre }}{% if vacante.empresa.sector %} · {{ vacante.empresa.sector }}{% endif %}</p>
+            <p>
+                <span class="badge bg-success-subtle text-success-emphasis">{{ vacante.get_tipo_display }}</span>
+                <span class="badge text-bg-light border">{{ vacante.get_modalidad_display }}</span>
+                {% if vacante.destacada %}<span class="badge text-bg-warning">⭐ Destacada</span>{% endif %}
+            </p>
+            <h2 class="h5 mt-4">Descripción</h2>
+            <p>{{ vacante.descripcion|linebreaksbr }}</p>
+            <h2 class="h5 mt-4">Requisitos</h2>
+            <p>{{ vacante.requisitos|linebreaksbr }}</p>
+            {% if vacante.habilidades.all %}
+                <h2 class="h5 mt-4">Habilidades</h2>
+                <p>{% for h in vacante.habilidades.all %}<span class="badge text-bg-light border me-1">{{ h.nombre }}</span>{% endfor %}</p>
+            {% endif %}
+            <h2 class="h5 mt-4">Carreras</h2>
+            <p>{% for c in vacante.carreras.all %}<span class="badge text-bg-light border me-1">{{ c.nombre }}</span>{% empty %}Todas las carreras{% endfor %}</p>
+        </div>
+
+        <aside class="col-lg-4">
+            <div class="card shadow-sm"><div class="card-body">
+                <ul class="list-unstyled mb-3">
+                    <li class="mb-2">📍 <strong>Ubicación:</strong> {{ vacante.ubicacion }}</li>
+                    <li class="mb-2">🕒 <strong>Horario:</strong> {{ vacante.horario|default:"No especificado" }}</li>
+                    <li class="mb-2">💰 <strong>Salario:</strong> {{ vacante.salario|default:"No especificado" }}</li>
+                    <li class="mb-2">🎓 <strong>Experiencia:</strong> {{ vacante.get_experiencia_display }}</li>
+                    <li class="mb-2">🗓️ <strong>Publicada:</strong> {{ vacante.fecha_publicacion|date:"d/m/Y" }}</li>
+                    <li class="mb-2">⏳ <strong>Fecha límite:</strong> {{ vacante.fecha_limite|date:"d/m/Y"|default:"Sin fecha límite" }}</li>
+                </ul>
+
+                {% if es_estudiante and vacante.esta_abierta %}
+                    {% if ya_postulado %}
+                        <button class="btn btn-success w-100 mb-2" disabled>✔ Ya te postulaste</button>
+                    {% else %}
+                        <form method="post" action="{% url 'vacantes:postular' vacante.pk %}">{% csrf_token %}
+                            <button class="btn btn-utc w-100 mb-2" type="submit">Postularme</button>
+                        </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'vacantes:favorito' vacante.pk %}">{% csrf_token %}
+                        <button class="btn btn-outline-warning w-100" type="submit">
+                            {% if es_favorito %}★ Quitar de guardadas{% else %}☆ Guardar vacante{% endif %}
+                        </button>
+                    </form>
+                {% elif not user.is_authenticated and vacante.esta_abierta %}
+                    <a class="btn btn-utc w-100 mb-2" href="{% url 'cuentas:login' %}?next={{ request.path }}">Inicia sesión para postularte</a>
+                    <a class="btn btn-outline-secondary w-100" href="{% url 'cuentas:registro' %}">Crear cuenta</a>
+                {% endif %}
+            </div></div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

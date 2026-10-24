@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <h1 class="h3 mb-3">{{ titulo }}</h1>
+    <div class="card shadow-sm"><div class="card-body p-4">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include 'includes/formulario.html' %}
+            <p class="small text-muted">Toda vacante nueva o editada pasa por revisión de la UTC antes de publicarse.</p>
+            <button class="btn btn-utc" type="submit">Guardar vacante</button>
+            <a class="btn btn-outline-secondary" href="{% url 'empresas:panel' %}">Cancelar</a>
+        </form>
+    </div></div>
+</div>
+{% endblock %}

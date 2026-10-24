@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Crear cuenta · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm tarjeta-auth mx-auto">
+        <div class="card-body p-4">
+            <h1 class="h3 mb-1">Crear cuenta</h1>
+            <p class="text-muted">Únete a Conecta UTC.</p>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include 'includes/formulario.html' %}
+                <button type="submit" class="btn btn-utc w-100">Registrarme</button>
+            </form>
+            <p class="text-center small mt-3 mb-0">¿Ya tienes cuenta? <a href="{% url 'cuentas:login' %}">Inicia sesión</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Mi perfil · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 class="h3 mb-0">Mi perfil</h1>
+        <a href="{% url 'estudiantes:editar_perfil' %}" class="btn btn-utc">Editar perfil</a>
+    </div>
+
+    {% if not perfil.esta_completo or not perfil.cv %}
+        <div class="alert alert-warning">Para postularte necesitas indicar tu nombre y carrera y subir tu CV en PDF. <a href="{% url 'estudiantes:editar_perfil' %}">Completar ahora</a>.</div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4"><div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h2 class="h5">{{ perfil.nombre_visible }}</h2>
+                <p class="mb-1">🎓 {{ perfil.carrera|default:"Carrera sin definir" }}</p>
+                <p class="mb-1">📚 {% if perfil.es_egresado %}Egresado{% elif perfil.cuatrimestre %}{{ perfil.cuatrimestre }}.º cuatrimestre{% else %}Cuatrimestre sin definir{% endif %}</p>
+                <p class="mb-1">✉️ {{ perfil.usuario.email }}</p>
+                <p class="mb-1">📞 {{ perfil.telefono|default:"Sin teléfono" }}</p>
+                <p class="mb-0">📄 CV:
+                    {% if perfil.cv %}<a href="{% url 'estudiantes:descargar_cv' perfil.pk %}" target="_blank" rel="noopener">Ver mi CV</a>
+                    {% else %}<span class="text-muted">sin subir</span>{% endif %}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h3 class="h6 text-muted">Habilidades</h3>
+                <p>{% for h in perfil.habilidades.all %}<span class="badge text-bg-light border me-1">{{ h.nombre }}</span>{% empty %}<span class="text-muted">Sin habilidades registradas</span>{% endfor %}</p>
+                <h3 class="h6 text-muted">Experiencia</h3>
+                <p class="mb-0">{{ perfil.experiencia|linebreaksbr|default:"Sin experiencia registrada" }}</p>
+            </div>
+        </div>
+    </div></div>
+
+    <section id="postulaciones" class="mb-4">
+        <h2 class="h4">Historial de postulaciones</h2>
+        <div class="card shadow-sm"><div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Vacante</th><th>Empresa</th><th>Fecha</th><th>Estado</th></tr></thead>
+                <tbody>
+                {% for p in postulaciones %}
+                    <tr>
+                        <td><a href="{{ p.vacante.get_absolute_url }}">{{ p.vacante.titulo }}</a></td>
+                        <td>{{ p.vacante.empresa.nombre }}</td>
+                        <td>{{ p.fecha|date:"d/m/Y" }}</td>
+                        <td><span class="badge text-bg-{{ p.clase_estado }}">{{ p.get_estado_display }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-muted text-center py-4">Todavía no te has postulado. <a href="{% url 'vacantes:lista' %}">Explora vacantes</a>.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div></div>
+    </section>
+
+    <section id="favoritos">
+        <h2 class="h4">Vacantes guardadas</h2>
+        <div class="row g-3">
+            {% for f in favoritos %}{% with v=f.vacante %}
+                <div class="col-md-6 col-lg-4">{% include 'includes/tarjeta_vacante.html' %}</div>
+            {% endwith %}{% empty %}
+                <div class="col-12"><div class="alert alert-light border">No has guardado vacantes.</div></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

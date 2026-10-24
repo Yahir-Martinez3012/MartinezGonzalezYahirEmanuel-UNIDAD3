@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Acceso denegado · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+    <h1 class="display-6">403 · Acceso denegado</h1>
+    <p class="text-muted">No tienes permiso para ver esta página con tu tipo de cuenta.</p>
+    <a href="{% url 'inicio' %}" class="btn btn-utc">Volver al inicio</a>
+</div>
+{% endblock %}

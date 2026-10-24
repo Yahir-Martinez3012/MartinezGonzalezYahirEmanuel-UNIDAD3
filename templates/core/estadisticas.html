@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Estadísticas · Conecta UTC{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 class="h3 mb-0">Estadísticas generales</h1>
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}" class="btn btn-outline-secondary">Ir a administración</a>{% endif %}
+    </div>
+
+    {% if pendientes_empresas or pendientes_vacantes %}
+        <div class="alert alert-warning">Pendientes de revisión: <strong>{{ pendientes_empresas }}</strong> empresa{{ pendientes_empresas|pluralize }} y <strong>{{ pendientes_vacantes }}</strong> vacante{{ pendientes_vacantes|pluralize }}.
+        {% if user.is_staff %}<a href="{% url 'admin:empresas_empresa_changelist' %}?estado__exact=pendiente">Empresas</a> · <a href="{% url 'admin:vacantes_vacante_changelist' %}?estado__exact=pendiente">Vacantes</a>{% endif %}</div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        {% for etiqueta, n in totales %}
+        <div class="col-6 col-md-4 col-lg-2"><div class="card text-center shadow-sm h-100"><div class="card-body">
+            <div class="stat-num">{{ n }}</div><div class="small text-muted">{{ etiqueta }}</div>
+        </div></div></div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6"><div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6">Vacantes por estado</h2>
+            {% for etiqueta, n, pct in vacantes_estado %}
+                <div class="small d-flex justify-content-between"><span>{{ etiqueta }}</span><span>{{ n }}</span></div>
+                <div class="progress mb-2" style="height: 8px;"><div class="progress-bar bg-success" style="width: {{ pct }}%"></div></div>
+            {% endfor %}
+        </div></div></div>
+        <div class="col-md-6"><div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6">Vacantes por tipo de oportunidad</h2>
+            {% for etiqueta, n, pct in vacantes_tipo %}
+                <div class="small d-flex justify-content-between"><span>{{ etiqueta }}</span><span>{{ n }}</span></div>
+                <div class="progress mb-2" style="height: 8px;"><div class="progress-bar bg-success" style="width: {{ pct }}%"></div></div>
+            {% endfor %}
+        </div></div></div>
+        <div class="col-md-6"><div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6">Postulaciones por estado</h2>
+            {% for etiqueta, n, pct in postulaciones_estado %}
+                <div class="small d-flex justify-content-between"><span>{{ etiqueta }}</span><span>{{ n }}</span></div>
+                <div class="progress mb-2" style="height: 8px;"><div class="progress-bar" style="width: {{ pct }}%"></div></div>
+            {% endfor %}
+        </div></div></div>
+        <div class="col-md-6"><div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6">Empresas por estado</h2>
+            {% for etiqueta, n, pct in empresas_estado %}
+                <div class="small d-flex justify-content-between"><span>{{ etiqueta }}</span><span>{{ n }}</span></div>
+                <div class="progress mb-2" style="height: 8px;"><div class="progress-bar bg-warning" style="width: {{ pct }}%"></div></div>
+            {% endfor %}
+        </div></div></div>
+        <div class="col-12"><div class="card shadow-sm"><div class="card-body">
+            <h2 class="h6">Vacantes con más postulaciones</h2>
+            <ol class="mb-0">
+                {% for v in top_vacantes %}<li><a href="{{ v.get_absolute_url }}">{{ v.titulo }}</a> · {{ v.empresa.nombre }} — <strong>{{ v.n }}</strong></li>
+                {% empty %}<li class="text-muted list-unstyled">Aún no hay postulaciones.</li>{% endfor %}
+            </ol>
+        </div></div></div>
+    </div>
+</div>
+{% endblock %}

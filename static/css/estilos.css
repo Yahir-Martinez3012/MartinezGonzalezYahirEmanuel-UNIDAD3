@@ -1,0 +1,28 @@
+:root {
+    --utc-primary: #0b5d3b;
+    --utc-primary-dark: #08452c;
+    --utc-accent: #f2a900;
+}
+.bg-utc { background-color: var(--utc-primary) !important; }
+.text-acento { color: var(--utc-accent); }
+.btn-utc { background-color: var(--utc-primary); border-color: var(--utc-primary); color: #fff; }
+.btn-utc:hover { background-color: var(--utc-primary-dark); border-color: var(--utc-primary-dark); color: #fff; }
+.btn-acento { background-color: var(--utc-accent); border-color: var(--utc-accent); color: #1f2933; font-weight: 600; }
+.btn-acento:hover { filter: brightness(.92); color: #1f2933; }
+.hero { background: linear-gradient(135deg, var(--utc-primary-dark), var(--utc-primary)); color: #fff; padding: 4.5rem 0; }
+.icono-circulo { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center;
+                 justify-content: center; font-size: 1.6rem; background: #e6f2ec; color: var(--utc-primary); }
+.pie { background: #1f2933; color: #cbd2d9; }
+.tarjeta-auth { max-width: 460px; }
+.checks-lista { columns: 2; column-gap: 1.5rem; max-height: 230px; overflow-y: auto; border: 1px solid #dee2e6;
+                border-radius: .5rem; padding: .75rem; }
+.checks-lista > div { break-inside: avoid; }
+.checks-lista label { display: block; }
+.checks-lista input { margin-right: .4rem; }
+.tarjeta-vacante { transition: transform .15s ease, box-shadow .15s ease; position: relative; }
+.tarjeta-vacante:hover { transform: translateY(-3px); box-shadow: 0 .6rem 1.2rem rgba(0,0,0,.12) !important; }
+.categoria { text-decoration: none; color: inherit; }
+.categoria:hover .card { border-color: var(--utc-primary); }
+.btn-favorito { position: relative; z-index: 2; }
+.stat-num { font-size: 2rem; font-weight: 700; color: var(--utc-primary); }
+@media (max-width: 575.98px) { .checks-lista { columns: 1; } .hero { padding: 3rem 0; } }

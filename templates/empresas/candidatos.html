@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Candidatos · {{ vacante.titulo }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <a href="{% url 'empresas:panel' %}" class="small">← Volver al panel</a>
+    <h1 class="h3 mt-2">Candidatos</h1>
+    <p class="text-muted">{{ vacante.titulo }} · {{ postulaciones|length }} postulado{{ postulaciones|length|pluralize }}</p>
+    <div class="card shadow-sm"><div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead><tr><th>Estudiante</th><th>Carrera</th><th>Habilidades</th><th>Contacto</th><th>CV</th><th style="min-width: 220px;">Estado</th></tr></thead>
+            <tbody>
+            {% for p in postulaciones %}{% with e=p.estudiante %}
+                <tr>
+                    <td><strong>{{ e.nombre_visible }}</strong><div class="small text-muted">{{ p.fecha|date:"d/m/Y" }}</div></td>
+                    <td>{{ e.carrera|default:"—" }}<div class="small text-muted">{% if e.es_egresado %}Egresado{% elif e.cuatrimestre %}{{ e.cuatrimestre }}.º cuatrimestre{% endif %}</div></td>
+                    <td>{% for h in e.habilidades.all|slice:":4" %}<span class="badge text-bg-light border me-1">{{ h.nombre }}</span>{% endfor %}</td>
+                    <td class="small">{{ e.usuario.email }}<br>{{ e.telefono }}</td>
+                    <td>{% if e.cv %}<a href="{% url 'estudiantes:descargar_cv' e.pk %}" target="_blank" rel="noopener">Ver CV</a>{% else %}—{% endif %}</td>
+                    <td>
+                        <form method="post" action="{% url 'empresas:cambiar_estado' p.pk %}" class="d-flex gap-1">
+                            {% csrf_token %}
+                            <select name="estado" class="form-select form-select-sm" aria-label="Estado de la postulación">
+                                {% for valor, etiqueta in estados %}<option value="{{ valor }}" {% if valor == p.estado %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-utc" type="submit">Guardar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endwith %}{% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">Todavía no hay postulaciones.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div></div>
+</div>
+{% endblock %}

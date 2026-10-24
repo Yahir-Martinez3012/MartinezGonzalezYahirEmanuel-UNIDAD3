@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Conecta UTC · Bolsa de trabajo universitaria{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="container text-center">
+        <h1 class="display-5 fw-bold">Tu siguiente oportunidad empieza en la UTC</h1>
+        <p class="lead mb-4">Prácticas, estadías y empleos para estudiantes y egresados de la Universidad Tecnológica de Coahuila.</p>
+        <form class="row g-2 justify-content-center" action="{% url 'vacantes:lista' %}" method="get">
+            <div class="col-12 col-md-7">
+                <input type="search" name="q" class="form-control form-control-lg" placeholder="Puesto o empresa" aria-label="Buscar vacantes">
+            </div>
+            <div class="col-12 col-md-auto"><button class="btn btn-acento btn-lg w-100" type="submit">Buscar empleos</button></div>
+        </form>
+        <p class="mt-3 mb-0 opacity-75">{{ total_vacantes }} vacante{{ total_vacantes|pluralize }} disponible{{ total_vacantes|pluralize }} · {{ total_empresas }} empresa{{ total_empresas|pluralize }}</p>
+        {% if not user.is_authenticated %}
+        <div class="mt-4 d-flex gap-2 justify-content-center">
+            <a href="{% url 'cuentas:registro' %}" class="btn btn-light">Crear cuenta</a>
+            <a href="{% url 'cuentas:login' %}" class="btn btn-outline-light">Iniciar sesión</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="container py-5">
+    <h2 class="h4 mb-3">Explora por categoría</h2>
+    <div class="row g-3">
+        {% for valor, etiqueta, n in categorias %}
+        <div class="col-6 col-md">
+            <a class="categoria" href="{% url 'vacantes:lista' %}?tipo={{ valor }}">
+                <div class="card text-center h-100 shadow-sm"><div class="card-body">
+                    <div class="stat-num">{{ n }}</div><div class="small">{{ etiqueta }}</div>
+                </div></div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+{% if destacadas %}
+<section class="container pb-4">
+    <h2 class="h4 mb-3">⭐ Vacantes destacadas</h2>
+    <div class="row g-3">
+        {% for v in destacadas %}<div class="col-md-6 col-lg-4">{% include 'includes/tarjeta_vacante.html' %}</div>{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Vacantes recientes</h2>
+        <a href="{% url 'vacantes:lista' %}" class="btn btn-outline-secondary btn-sm">Ver todas</a>
+    </div>
+    <div class="row g-3">
+        {% for v in recientes %}
+            <div class="col-md-6 col-lg-4">{% include 'includes/tarjeta_vacante.html' %}</div>
+        {% empty %}
+            <div class="col-12"><div class="alert alert-light border">Aún no hay vacantes publicadas.</div></div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
