@@ -1,9 +1,6 @@
-import shutil
-import tempfile
-
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from catalogo.models import Carrera, Habilidad
@@ -11,23 +8,16 @@ from cuentas.models import Usuario
 from postulaciones.models import Postulacion
 from vacantes.models import Vacante
 
-from .models import PerfilEstudiante
+from .models import ArchivoCV, PerfilEstudiante
 
 PWD = 'ConectaUTC2026!'
 PDF = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
 
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class PerfilTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         call_command('poblar_demo', '--usuarios', verbosity=0)
-
-    @classmethod
-    def tearDownClass(cls):
-        from django.conf import settings
-        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
-        super().tearDownClass()
 
     def setUp(self):
         self.client.login(username='estudiante_demo', password=PWD)
@@ -43,8 +33,9 @@ class PerfilTests(TestCase):
         r = self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('cv.pdf', PDF, 'application/pdf')})
         self.assertRedirects(r, reverse('estudiantes:perfil'))
         perfil = PerfilEstudiante.objects.get(usuario__username='estudiante_demo')
-        self.assertTrue(perfil.cv.name.startswith('cvs/') and perfil.cv.name.endswith('.pdf'))
-        self.assertNotIn('cv.pdf', perfil.cv.name)             # nombre aleatorio
+        self.assertTrue(perfil.tiene_cv)
+        self.assertEqual(perfil.cv_nombre, 'cv.pdf')
+        self.assertEqual(bytes(ArchivoCV.objects.get(perfil=perfil).contenido), PDF)   # el contenido queda en la base
 
     def test_cv_rechaza_extension_falsa_y_contenido_falso(self):
         r = self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('virus.exe', PDF)})
@@ -52,18 +43,32 @@ class PerfilTests(TestCase):
         r = self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('falso.pdf', b'MZ no soy un pdf')})
         self.assertContains(r, 'no es un PDF válido')
 
+    def test_cv_acepta_pdf_con_bytes_previos_a_la_firma(self):
+        """Algunos generadores de PDF anteponen espacios o saltos de línea antes de %PDF-."""
+        pdf = SimpleUploadedFile('con_prefijo.pdf', b'\n\n  ' + PDF, 'application/pdf')
+        r = self.client.post(self.url, {**self.base, 'cv': pdf})
+        self.assertRedirects(r, reverse('estudiantes:perfil'))
+
     def test_cv_rechaza_archivo_grande(self):
         grande = SimpleUploadedFile('grande.pdf', b'%PDF-' + b'0' * (5 * 1024 * 1024 + 10))
         self.assertContains(self.client.post(self.url, {**self.base, 'cv': grande}), 'no puede pesar más de 5 MB')
 
-    def test_reemplazar_cv_borra_el_anterior(self):
+    def test_reemplazar_cv_no_deja_duplicados(self):
         self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('a.pdf', PDF)})
+        nuevo = PDF + b'\n% version 2'
+        self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('b.pdf', nuevo)})
         perfil = PerfilEstudiante.objects.get(usuario__username='estudiante_demo')
-        viejo = perfil.cv.name
-        self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('b.pdf', PDF)})
-        perfil.refresh_from_db()
-        self.assertNotEqual(perfil.cv.name, viejo)
-        self.assertFalse(perfil.cv.storage.exists(viejo))
+        self.assertEqual(perfil.cv_nombre, 'b.pdf')
+        self.assertEqual(ArchivoCV.objects.filter(perfil=perfil).count(), 1)
+        self.assertEqual(bytes(ArchivoCV.objects.get(perfil=perfil).contenido), nuevo)
+
+    def test_editar_perfil_sin_subir_cv_conserva_el_existente(self):
+        self.client.post(self.url, {**self.base, 'cv': SimpleUploadedFile('a.pdf', PDF)})
+        self.client.post(self.url, {**self.base, 'nombre_completo': 'Ana Editada'})   # sin archivo
+        perfil = PerfilEstudiante.objects.get(usuario__username='estudiante_demo')
+        self.assertEqual(perfil.nombre_completo, 'Ana Editada')
+        self.assertTrue(perfil.tiene_cv)
+        self.assertEqual(bytes(ArchivoCV.objects.get(perfil=perfil).contenido), PDF)
 
     def test_egresado_limpia_cuatrimestre(self):
         self.client.post(self.url, {**self.base, 'es_egresado': 'on'})
@@ -85,6 +90,7 @@ class PerfilTests(TestCase):
         r = self.client.get(url)                                # dueño
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r['Content-Type'], 'application/pdf')
+        self.assertEqual(r.content, PDF)
         self.client.login(username='admin_utc', password=PWD)   # admin
         self.assertEqual(self.client.get(url).status_code, 200)
         self.client.login(username='empresa_demo', password=PWD)   # empresa donde se postuló
