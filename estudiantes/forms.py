@@ -15,12 +15,19 @@ class PerfilEstudianteForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = PerfilEstudiante
         fields = ['nombre_completo', 'carrera', 'cuatrimestre', 'es_egresado', 'telefono',
-                  'habilidades', 'experiencia', 'cv']
+                  'habilidades', 'experiencia']
         widgets = {
             'habilidades': forms.CheckboxSelectMultiple,
             'experiencia': forms.Textarea(attrs={'rows': 4}),
         }
         labels = {'nombre_completo': 'Nombre completo', 'telefono': 'Teléfono de contacto'}
+
+    def save(self, commit=True):
+        perfil = super().save(commit=commit)
+        archivo = self.cleaned_data.get('cv')
+        if commit and archivo:                       # solo si se subió un CV nuevo
+            perfil.guardar_cv(archivo.name, archivo.read())
+        return perfil
 
     def clean(self):
         datos = super().clean()

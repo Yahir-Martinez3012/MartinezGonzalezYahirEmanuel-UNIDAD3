@@ -7,7 +7,7 @@
         <a href="{% url 'estudiantes:editar_perfil' %}" class="btn btn-utc">Editar perfil</a>
     </div>
 
-    {% if not perfil.esta_completo or not perfil.cv %}
+    {% if not perfil.esta_completo or not perfil.tiene_cv %}
         <div class="alert alert-warning">Para postularte necesitas indicar tu nombre y carrera y subir tu CV en PDF. <a href="{% url 'estudiantes:editar_perfil' %}">Completar ahora</a>.</div>
     {% endif %}
 
@@ -20,7 +20,7 @@
                 <p class="mb-1">✉️ {{ perfil.usuario.email }}</p>
                 <p class="mb-1">📞 {{ perfil.telefono|default:"Sin teléfono" }}</p>
                 <p class="mb-0">📄 CV:
-                    {% if perfil.cv %}<a href="{% url 'estudiantes:descargar_cv' perfil.pk %}" target="_blank" rel="noopener">Ver mi CV</a>
+                    {% if perfil.tiene_cv %}<a href="{% url 'estudiantes:descargar_cv' perfil.pk %}" target="_blank" rel="noopener">Ver mi CV</a> <span class="small text-muted">({{ perfil.cv_nombre }}, subido el {{ perfil.cv_subido|date:"d/m/Y" }})</span>
                     {% else %}<span class="text-muted">sin subir</span>{% endif %}
                 </p>
             </div>

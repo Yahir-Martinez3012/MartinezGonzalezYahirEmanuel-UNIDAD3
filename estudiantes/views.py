@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import FileResponse, Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from cuentas.decorators import rol_requerido
@@ -9,7 +9,7 @@ from cuentas.models import Usuario
 from postulaciones.models import Postulacion
 
 from .forms import PerfilEstudianteForm
-from .models import PerfilEstudiante
+from .models import ArchivoCV, PerfilEstudiante
 
 ESTUDIANTE = Usuario.Rol.ESTUDIANTE
 
@@ -28,12 +28,9 @@ def perfil(request):
 @rol_requerido(ESTUDIANTE)
 def editar_perfil(request):
     perfil = PerfilEstudiante.para(request.user)
-    cv_anterior = perfil.cv.name
     form = PerfilEstudianteForm(request.POST or None, request.FILES or None, instance=perfil)
     if request.method == 'POST' and form.is_valid():
-        perfil = form.save()
-        if cv_anterior and perfil.cv.name != cv_anterior:     # elimina el CV reemplazado
-            perfil.cv.storage.delete(cv_anterior)
+        form.save()                      # si se subió un CV nuevo, reemplaza al anterior
         messages.success(request, 'Tu perfil se actualizó correctamente.')
         return redirect('estudiantes:perfil')
     return render(request, 'estudiantes/perfil_form.html', {'form': form})
@@ -52,10 +49,10 @@ def descargar_cv(request, pk):
     )
     if not permitido:
         raise PermissionDenied
-    if not perfil.cv:
-        raise Http404('Este estudiante no ha subido su CV.')
     try:
-        archivo = perfil.cv.open('rb')
-    except FileNotFoundError:
-        raise Http404('El archivo ya no está disponible.')
-    return FileResponse(archivo, content_type='application/pdf', filename=f'CV_{perfil.usuario.username}.pdf')
+        archivo = ArchivoCV.objects.get(perfil=perfil)
+    except ArchivoCV.DoesNotExist:
+        raise Http404('Este estudiante no ha subido su CV.')
+    respuesta = HttpResponse(bytes(archivo.contenido), content_type='application/pdf')
+    respuesta['Content-Disposition'] = f'inline; filename="CV_{perfil.usuario.username}.pdf"'
+    return respuesta
