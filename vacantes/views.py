@@ -64,7 +64,7 @@ def detalle(request, pk):
 def postular(request, pk):
     vacante = get_object_or_404(Vacante.objects.abiertas(), pk=pk)
     perfil = PerfilEstudiante.para(request.user)
-    if not perfil.esta_completo or not perfil.cv:
+    if not perfil.esta_completo or not perfil.tiene_cv:
         messages.warning(request, 'Completa tu perfil (nombre y carrera) y sube tu CV en PDF para postularte.')
         return redirect('estudiantes:editar_perfil')
     _, creada = Postulacion.objects.get_or_create(estudiante=perfil, vacante=vacante)

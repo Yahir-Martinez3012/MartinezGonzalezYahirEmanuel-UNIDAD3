@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
+from servicios import recaptcha
+
+from . import seguridad
 from .models import Usuario
 
 
@@ -22,7 +25,22 @@ class BootstrapMixin:
             w.attrs['class'] = f"{w.attrs.get('class', '')} {clase}".strip()
 
 
-class RegistroForm(BootstrapMixin, UserCreationForm):
+class CaptchaMixin:
+    """Exige resolver reCAPTCHA antes de procesar el formulario (si el servicio está configurado).
+
+    Se valida primero, para que un robot no pueda ni siquiera provocar intentos de inicio de sesión.
+    """
+
+    def clean(self):
+        if recaptcha.habilitado():
+            token = self.data.get('g-recaptcha-response')
+            ip = seguridad.ip_cliente(getattr(self, 'request', None))
+            if not recaptcha.verificar(token, ip):
+                raise forms.ValidationError('Confirma que no eres un robot e inténtalo de nuevo.', code='captcha')
+        return super().clean()
+
+
+class RegistroForm(CaptchaMixin, BootstrapMixin, UserCreationForm):
     email = forms.EmailField(label='Correo electrónico')
     # Solo se permiten estos dos roles: el administrador UTC nunca se crea desde el registro público.
     rol = forms.ChoiceField(
@@ -45,6 +63,15 @@ class RegistroForm(BootstrapMixin, UserCreationForm):
         return email
 
 
-class LoginForm(BootstrapMixin, AuthenticationForm):
+class LoginForm(CaptchaMixin, BootstrapMixin, AuthenticationForm):
     username = forms.CharField(label='Nombre de usuario')
     password = forms.CharField(label='Contraseña', strip=False, widget=forms.PasswordInput)
+
+    def clean(self):
+        usuario = self.cleaned_data.get('username')
+        if usuario and seguridad.esta_bloqueado(usuario):
+            # El mensaje es igual exista o no la cuenta, para no revelar qué usuarios están registrados.
+            raise forms.ValidationError(
+                'Demasiados intentos fallidos. Por seguridad, espera %(min)s minuto(s) antes de volver a intentar.',
+                code='bloqueado', params={'min': seguridad.minutos_restantes(usuario)})
+        return super().clean()

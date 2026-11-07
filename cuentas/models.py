@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class Usuario(AbstractUser):
@@ -31,3 +32,18 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return f'{self.username} ({self.get_rol_display()})'
+
+
+class IntentoLogin(models.Model):
+    """Bitácora de inicios de sesión fallidos; se usa para bloquear cuentas atacadas por fuerza bruta."""
+    usuario = models.CharField('usuario escrito', max_length=150, db_index=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    creado = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-creado']
+        verbose_name = 'intento de inicio de sesión fallido'
+        verbose_name_plural = 'intentos de inicio de sesión fallidos'
+
+    def __str__(self):
+        return f'{self.usuario} desde {self.ip or "?"} ({self.creado:%d/%m/%Y %H:%M})'

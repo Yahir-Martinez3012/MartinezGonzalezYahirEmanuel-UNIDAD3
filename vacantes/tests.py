@@ -73,7 +73,7 @@ class VacantesTests(TestCase):
     def test_postular_con_cv_y_sin_duplicados(self):
         self.client.login(username='estudiante_demo', password=PWD)
         perfil = PerfilEstudiante.objects.get(usuario__username='estudiante_demo')
-        perfil.cv.save('x.pdf', SimpleUploadedFile('x.pdf', b'%PDF-1.4 prueba'))
+        perfil.guardar_cv('x.pdf', b'%PDF-1.4 prueba')
         v = Vacante.objects.get(titulo='Prácticas en Soporte Técnico')
         url = reverse('vacantes:postular', args=[v.pk])
         self.client.post(url)

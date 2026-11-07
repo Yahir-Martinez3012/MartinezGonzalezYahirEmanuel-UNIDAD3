@@ -9,6 +9,7 @@
             <form method="post" novalidate>
                 {% csrf_token %}
                 {% include 'includes/formulario.html' %}
+                {% include 'includes/recaptcha.html' %}
                 <button type="submit" class="btn btn-utc w-100">Registrarme</button>
             </form>
             <p class="text-center small mt-3 mb-0">¿Ya tienes cuenta? <a href="{% url 'cuentas:login' %}">Inicia sesión</a></p>
