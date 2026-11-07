@@ -10,6 +10,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ next }}">
                 {% include 'includes/formulario.html' %}
+                {% include 'includes/recaptcha.html' %}
                 <button type="submit" class="btn btn-utc w-100">Entrar</button>
             </form>
             <p class="text-center small mt-3 mb-0">¿No tienes cuenta? <a href="{% url 'cuentas:registro' %}">Regístrate</a></p>
