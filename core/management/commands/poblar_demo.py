@@ -48,12 +48,27 @@ VACANTES = [
 ]
 
 
+# Coordenadas aproximadas (centro de cada ciudad) para que el mapa de la demo funcione sin consultar servicios externos.
+COORDENADAS = {'Saltillo': (25.4232, -100.9737), 'Ramos Arizpe': (25.5417, -100.9500)}
+
+
+def coordenadas_de(ubicacion, modalidad):
+    if modalidad == 'remota':
+        return None, None
+    for ciudad, (lat, lng) in COORDENADAS.items():
+        if ubicacion.startswith(ciudad):
+            return lat, lng
+    return None, None
+
+
 class Command(BaseCommand):
     help = 'Carga carreras, habilidades, empresas y vacantes de demostración (idempotente).'
 
     def add_arguments(self, parser):
         parser.add_argument('--usuarios', action='store_true',
                             help='Crea cuentas de acceso demo: estudiante_demo, empresa_demo y admin_utc.')
+        parser.add_argument('--restablecer', action='store_true',
+                            help='Vuelve a poner la contraseña y el perfil de ejemplo de las cuentas demo.')
         parser.add_argument('--password', default=os.environ.get('DEMO_PASSWORD', 'ConectaUTC2026!'),
                             help='Contraseña de las cuentas demo (o variable DEMO_PASSWORD).')
 
@@ -76,8 +91,10 @@ class Command(BaseCommand):
         hoy = timezone.localdate()
         for (e, puesto, tipo, modalidad, ubicacion, horario, salario, exp, cars, habs,
              dias_pub, dias_lim, destacada, estado, desc) in VACANTES:
+            lat, lng = coordenadas_de(ubicacion, modalidad)
             vacante, _ = Vacante.objects.update_or_create(
                 empresa=empresas[e], titulo=puesto, defaults={
+                    'latitud': lat, 'longitud': lng,
                     'descripcion': desc, 'tipo': tipo, 'modalidad': modalidad, 'ubicacion': ubicacion,
                     'horario': horario, 'salario': salario, 'experiencia': exp, 'destacada': destacada,
                     'estado': estado, 'fecha_publicacion': ahora - timedelta(days=dias_pub),
@@ -90,31 +107,38 @@ class Command(BaseCommand):
                           f'{len(empresas)} empresas, {len(VACANTES)} vacantes.')
 
         if opts['usuarios']:
-            self._crear_usuarios(opts['password'], carreras, habilidades, empresas)
+            self._crear_usuarios(opts['password'], opts['restablecer'], carreras, habilidades, empresas)
 
-    def _crear_usuarios(self, password, carreras, habilidades, empresas):
+    def _crear_usuarios(self, password, restablecer, carreras, habilidades, empresas):
+        """Crea las cuentas demo sin pisar lo que el usuario ya haya editado (contraseña ni perfil),
+        salvo que se pida --restablecer. Así un nuevo despliegue no borra los cambios hechos."""
+        def fijar_password(usuario, es_nuevo):
+            if es_nuevo or restablecer or not usuario.has_usable_password():
+                usuario.set_password(password)
+                usuario.save()
+
         demo = empresas[0].usuario
-        demo.set_password(password)
-        demo.save()
+        fijar_password(demo, False)
 
-        est, _ = Usuario.objects.get_or_create(
+        est, nuevo = Usuario.objects.get_or_create(
             username='estudiante_demo', defaults={'rol': Usuario.Rol.ESTUDIANTE, 'email': 'estudiante_demo@ejemplo.com'})
-        est.set_password(password)
-        est.save()
+        fijar_password(est, nuevo)
         perfil = PerfilEstudiante.para(est)
-        perfil.nombre_completo = 'Ana Martínez (demo)'
-        perfil.carrera = carreras[1]
-        perfil.cuatrimestre = 9
-        perfil.telefono = '844 000 0000'
-        perfil.experiencia = 'Proyecto escolar de bolsa de trabajo en Django. Prácticas en soporte técnico.'
-        perfil.save()
-        perfil.habilidades.set([habilidades[h] for h in ('Python', 'Django', 'Git', 'SQL', 'HTML y CSS')])
+        if restablecer or not perfil.nombre_completo:       # solo se rellena un perfil vacío
+            perfil.nombre_completo = 'Ana Martínez (demo)'
+            perfil.carrera = carreras[1]
+            perfil.cuatrimestre = 9
+            perfil.telefono = '844 000 0000'
+            perfil.experiencia = 'Proyecto escolar de bolsa de trabajo en Django. Prácticas en soporte técnico.'
+            perfil.save()
+            perfil.habilidades.set([habilidades[h] for h in ('Python', 'Django', 'Git', 'SQL', 'HTML y CSS')])
 
-        adm, _ = Usuario.objects.get_or_create(
+        adm, nuevo = Usuario.objects.get_or_create(
             username='admin_utc', defaults={'email': 'admin_utc@ejemplo.com', 'is_staff': True, 'is_superuser': True})
-        adm.is_staff = adm.is_superuser = True
-        adm.set_password(password)
-        adm.save()
+        if not (adm.is_staff and adm.is_superuser):
+            adm.is_staff = adm.is_superuser = True
+            adm.save()
+        fijar_password(adm, nuevo)
 
         abiertas = list(Vacante.objects.abiertas()[:3])
         for v in abiertas[:2]:

@@ -1,0 +1,18 @@
+[run]
+source = .
+branch = True
+omit =
+    */migrations/*
+    */tests*.py
+    manage.py
+    config/wsgi.py
+    config/asgi.py
+    venv/*
+    .venv/*
+
+[report]
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError

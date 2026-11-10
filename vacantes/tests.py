@@ -1,8 +1,7 @@
 from datetime import timedelta
 
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -69,7 +68,6 @@ class VacantesTests(TestCase):
         self.assertRedirects(r, reverse('estudiantes:editar_perfil'))
         self.assertFalse(Postulacion.objects.filter(vacante=v).exists())
 
-    @override_settings(MEDIA_ROOT='/tmp/conecta_test_media')
     def test_postular_con_cv_y_sin_duplicados(self):
         self.client.login(username='estudiante_demo', password=PWD)
         perfil = PerfilEstudiante.objects.get(usuario__username='estudiante_demo')
@@ -102,3 +100,28 @@ class VacantesTests(TestCase):
         v = Vacante.objects.get(titulo='Auxiliar Contable')
         r = self.client.post(reverse('vacantes:favorito', args=[v.pk]), {'next': 'https://malicioso.com'})
         self.assertRedirects(r, v.get_absolute_url())
+
+
+class MapaDeLaVacanteTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command('poblar_demo', verbosity=0)
+
+    def test_con_coordenadas_muestra_el_mapa_con_punto_decimal(self):
+        v = Vacante.objects.get(titulo='Desarrollador Web Junior')
+        r = self.client.get(v.get_absolute_url())
+        self.assertContains(r, 'id="mapa"')
+        self.assertContains(r, 'data-lat="25.423200"')        # punto decimal, aunque el idioma sea es-mx
+        self.assertNotContains(r, 'data-lat="25,')
+        self.assertContains(r, 'leaflet@1.9.4/dist/leaflet.js')
+        self.assertContains(r, 'js/mapa.js')
+
+    def test_vacante_remota_no_muestra_mapa(self):
+        v = Vacante.objects.get(titulo='Prácticas en Análisis de Datos')
+        r = self.client.get(v.get_absolute_url())
+        self.assertNotContains(r, 'id="mapa"')
+        self.assertNotContains(r, 'leaflet')
+
+    def test_la_politica_csp_permite_las_teselas_de_openstreetmap(self):
+        v = Vacante.objects.get(titulo='Desarrollador Web Junior')
+        self.assertIn('https://tile.openstreetmap.org', self.client.get(v.get_absolute_url())['Content-Security-Policy'])

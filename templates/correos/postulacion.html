@@ -1,0 +1,12 @@
+<div style="font-family: Arial, sans-serif; max-width: 520px;">
+    <h2 style="color: #0b5d3b;">Conecta UTC</h2>
+    <p>Hola {{ nombre }},</p>
+    {% if creada %}
+        <p>Recibimos tu postulación a <strong>{{ vacante }}</strong> de <strong>{{ empresa }}</strong>.</p>
+    {% else %}
+        <p>El estado de tu postulación a <strong>{{ vacante }}</strong> de <strong>{{ empresa }}</strong> cambió a:</p>
+        <p style="font-size: 18px;"><strong>{{ estado }}</strong></p>
+    {% endif %}
+    <p>Puedes consultar el detalle en tu perfil de Conecta UTC.</p>
+    <p style="color: #6b7280; font-size: 12px;">Universidad Tecnológica de Coahuila · Bolsa de trabajo</p>
+</div>

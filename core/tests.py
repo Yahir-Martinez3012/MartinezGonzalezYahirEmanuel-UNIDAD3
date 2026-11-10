@@ -38,3 +38,25 @@ class InicioYEstadisticasTests(TestCase):
     def test_cuentas_demo_empresas_sin_acceso_por_defecto(self):
         u = Usuario.objects.get(username='empresa_autopartes')
         self.assertFalse(u.has_usable_password())
+
+
+class DemoNoPisaCambiosTests(TestCase):
+    def test_segunda_ejecucion_conserva_perfil_y_contrasena(self):
+        call_command('poblar_demo', '--usuarios', verbosity=0)
+        from estudiantes.models import PerfilEstudiante
+        perfil = PerfilEstudiante.objects.get(usuario__username='estudiante_demo')
+        perfil.nombre_completo = 'Nombre Editado'
+        perfil.save()
+        usuario = Usuario.objects.get(username='estudiante_demo')
+        usuario.set_password('OtraClave#2026')
+        usuario.save()
+
+        call_command('poblar_demo', '--usuarios', verbosity=0)          # nuevo despliegue
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.nombre_completo, 'Nombre Editado')
+        self.assertTrue(Usuario.objects.get(username='estudiante_demo').check_password('OtraClave#2026'))
+
+        call_command('poblar_demo', '--usuarios', '--restablecer', verbosity=0)
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.nombre_completo, 'Ana Martínez (demo)')
+        self.assertTrue(Usuario.objects.get(username='estudiante_demo').check_password('ConectaUTC2026!'))

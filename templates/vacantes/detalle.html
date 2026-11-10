@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
+{% load l10n %}
 {% block title %}{{ vacante.titulo }} · Conecta UTC{% endblock %}
+{% block extra_head %}
+    {% if vacante.tiene_coordenadas %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">{% endif %}
+{% endblock %}
 {% block content %}
 <div class="container py-4">
     <nav aria-label="breadcrumb"><ol class="breadcrumb">
@@ -32,6 +36,13 @@
             {% endif %}
             <h2 class="h5 mt-4">Carreras</h2>
             <p>{% for c in vacante.carreras.all %}<span class="badge text-bg-light border me-1">{{ c.nombre }}</span>{% empty %}Todas las carreras{% endfor %}</p>
+            {% if vacante.tiene_coordenadas %}
+                <h2 class="h5 mt-4">Ubicación en el mapa</h2>
+                <div id="mapa" class="mapa-vacante rounded border"
+                     data-lat="{{ vacante.latitud|unlocalize }}" data-lng="{{ vacante.longitud|unlocalize }}"
+                     data-titulo="{{ vacante.empresa.nombre }} · {{ vacante.ubicacion }}"></div>
+                <p class="small text-muted mt-1">Ubicación aproximada de la ciudad. Mapa © colaboradores de OpenStreetMap.</p>
+            {% endif %}
         </div>
 
         <aside class="col-lg-4">
@@ -66,4 +77,10 @@
         </aside>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+    {% if vacante.tiene_coordenadas %}
+        <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+        {% load static %}<script src="{% static 'js/mapa.js' %}"></script>
+    {% endif %}
 {% endblock %}

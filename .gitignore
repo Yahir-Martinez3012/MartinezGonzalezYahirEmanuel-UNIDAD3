@@ -8,3 +8,5 @@ media/
 staticfiles/
 .vscode/
 .DS_Store
+htmlcov/
+.coverage

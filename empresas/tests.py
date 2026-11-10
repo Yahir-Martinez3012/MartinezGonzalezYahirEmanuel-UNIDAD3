@@ -92,3 +92,48 @@ class PanelEmpresaTests(TestCase):
     def test_cambiar_estado_requiere_post(self):
         p = Postulacion.objects.first()
         self.assertEqual(self.client.get(reverse('empresas:cambiar_estado', args=[p.pk])).status_code, 405)
+
+
+class AccionesDelAdministradorTests(TestCase):
+    """El administrador UTC aprueba o rechaza empresas y vacantes desde el panel de Django."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command('poblar_demo', '--usuarios', verbosity=0)
+
+    def setUp(self):
+        self.client.login(username='admin_utc', password=PWD)
+
+    def accion(self, modelo, accion, ids):
+        return self.client.post(reverse(f'admin:{modelo}_changelist'),
+                                {'action': accion, '_selected_action': ids}, follow=True)
+
+    def test_aprobar_y_rechazar_empresas(self):
+        nueva = Empresa.objects.get(nombre='Soluciones Industriales del Desierto')
+        self.assertEqual(nueva.estado, 'pendiente')
+        self.accion('empresas_empresa', 'aprobar', [nueva.pk])
+        nueva.refresh_from_db()
+        self.assertEqual(nueva.estado, 'aprobada')
+        self.accion('empresas_empresa', 'rechazar', [nueva.pk])
+        nueva.refresh_from_db()
+        self.assertEqual(nueva.estado, 'rechazada')
+
+    def test_aprobar_y_rechazar_vacantes(self):
+        v = Vacante.objects.get(titulo='Diseñador UX/UI (medio tiempo)')
+        self.accion('vacantes_vacante', 'aprobar', [v.pk])
+        v.refresh_from_db()
+        self.assertEqual(v.estado, 'aprobada')
+        self.assertTrue(Vacante.objects.abiertas().filter(pk=v.pk).exists())      # ya es pública
+        self.accion('vacantes_vacante', 'rechazar', [v.pk])
+        v.refresh_from_db()
+        self.assertEqual(v.estado, 'rechazada')
+        self.assertFalse(Vacante.objects.abiertas().filter(pk=v.pk).exists())
+
+    def test_un_estudiante_no_puede_usar_el_panel_de_administracion(self):
+        pendiente = Vacante.objects.get(titulo='Diseñador UX/UI (medio tiempo)')
+        self.client.login(username='estudiante_demo', password=PWD)
+        r = self.client.post(reverse('admin:vacantes_vacante_changelist'),
+                             {'action': 'aprobar', '_selected_action': [pendiente.pk]})
+        self.assertEqual(r.status_code, 302)                                      # lo manda a iniciar sesión como staff
+        pendiente.refresh_from_db()
+        self.assertEqual(pendiente.estado, 'pendiente')                           # la acción no se ejecutó

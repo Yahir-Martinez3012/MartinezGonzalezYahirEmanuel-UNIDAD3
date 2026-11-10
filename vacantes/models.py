@@ -59,6 +59,8 @@ class Vacante(models.Model):
     ubicacion = models.CharField('Ubicación', max_length=120)
     horario = models.CharField(max_length=100, blank=True)
     salario = models.CharField(max_length=100, blank=True, help_text='Opcional. Ej.: $9,000 mensuales')
+    latitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, editable=False)
+    longitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, editable=False)
     fecha_publicacion = models.DateTimeField(default=timezone.now, editable=False)
     fecha_limite = models.DateField('Fecha límite', null=True, blank=True)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
@@ -78,6 +80,17 @@ class Vacante(models.Model):
     @property
     def clase_estado(self):
         return self.CLASES_ESTADO[self.estado]
+
+    @property
+    def tiene_coordenadas(self):
+        return self.latitud is not None and self.longitud is not None
+
+    def actualizar_coordenadas(self):
+        """Consulta Nominatim y guarda las coordenadas. Las vacantes remotas no tienen ubicación en el mapa."""
+        from servicios import geocodificacion
+        resultado = None if self.modalidad == self.Modalidad.REMOTA else geocodificacion.geocodificar(self.ubicacion)
+        self.latitud, self.longitud = resultado if resultado else (None, None)
+        self.save(update_fields=['latitud', 'longitud'])
 
     def get_absolute_url(self):
         return reverse('vacantes:detalle', args=[self.pk])

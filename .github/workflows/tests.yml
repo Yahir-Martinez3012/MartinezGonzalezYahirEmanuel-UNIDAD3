@@ -1,0 +1,35 @@
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+
+      - name: Verificar migraciones y configuración
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+
+      - name: Ejecutar pruebas con cobertura
+        run: |
+          coverage run manage.py test
+          coverage report --fail-under=90

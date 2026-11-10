@@ -2,74 +2,92 @@
 
 Bolsa de trabajo universitaria para estudiantes y egresados de la **Universidad Tecnológica de Coahuila (UTC)**, desarrollada con Django.
 
-## Problemática
+## Problemática y solución
 
-Las vacantes dirigidas a los estudiantes se comparten principalmente por correo institucional, donde se pierden entre otros mensajes, no se pueden buscar ni filtrar, no se sabe cuáles siguen disponibles y no hay seguimiento de las postulaciones.
-
-## Solución
-
-Una plataforma web donde los **estudiantes** consultan, buscan, filtran, guardan y se postulan a vacantes; las **empresas** publican y administran ofertas y candidatos; y el **administrador UTC** revisa empresas y vacantes y consulta estadísticas.
+Las vacantes se compartían por correo institucional, donde se perdían, no se podían buscar ni se les daba seguimiento. Conecta UTC centraliza las vacantes: los **estudiantes** consultan, filtran, guardan y se postulan; las **empresas** publican y gestionan candidatos; y el **administrador UTC** revisa empresas y vacantes y consulta estadísticas.
 
 ## Funcionalidades
 
 | Rol | Puede |
 |---|---|
-| Estudiante | Registrarse, iniciar/cerrar sesión, editar perfil (carrera, cuatrimestre, habilidades, experiencia), subir CV en PDF, buscar y filtrar vacantes, ver detalle, guardar favoritas, postularse y consultar el estado (Enviada, En revisión, Entrevista, Aceptada, Rechazada) |
-| Empresa | Tener perfil empresarial, publicar, editar y cerrar vacantes, ver candidatos y cambiar el estado de cada postulación |
-| Administrador UTC | Aprobar o rechazar empresas y vacantes, administrar estudiantes, empresas, vacantes y postulaciones (panel de Django) y consultar estadísticas generales |
+| Estudiante | Registrarse, editar su perfil, subir su CV en PDF, buscar y filtrar vacantes, ver el mapa de cada una, guardar favoritas, postularse, recibir correos y consultar el estado de sus postulaciones |
+| Empresa | Tener perfil, publicar, editar y cerrar vacantes, ver candidatos y cambiar el estado de cada postulación |
+| Administrador UTC | Aprobar o rechazar empresas y vacantes, administrar datos, ver estadísticas y la bitácora de intentos fallidos |
 
-Filtros de vacantes: palabra clave, carrera, empresa, modalidad, ubicación, tipo de empleo, experiencia y fecha de publicación.
+## Mecanismos de seguridad
 
-## Estructura de aplicaciones
+| Mecanismo | Implementación |
+|---|---|
+| Autenticación y autorización | Usuario personalizado con roles; decorador `rol_requerido`; comprobación de propiedad de los datos |
+| Contraseñas | Hash de Django; mínimo 10 caracteres; validación de contraseñas comunes |
+| Fuerza bruta | Bloqueo de 15 min tras 5 intentos fallidos (web y API) y bitácora en el admin |
+| reCAPTCHA | Registro e inicio de sesión (Google reCAPTCHA v2) |
+| CSRF | Token en todos los formularios; la API usa solo token |
+| CSP y encabezados | Política de seguridad de contenido estricta, `X-Frame-Options`, `nosniff`, `Referrer-Policy` |
+| Sesiones y cookies | `HttpOnly`, `SameSite`, expiración a las 2 horas de inactividad; `Secure` y HTTPS forzado en producción |
+| Archivos | Validación de extensión, tamaño y contenido del PDF; descarga solo con permisos |
+| Secretos | Variables de entorno; `.env` fuera del repositorio |
+| Límite de peticiones | 60/min anónimos, 120/min autenticados y 10/min para el token |
 
-| App | Responsabilidad | Modelos |
+## Servicios web de terceros
+
+| Servicio | Uso | Adaptador |
 |---|---|---|
-| `config` | Configuración del proyecto | — |
-| `core` | Inicio, estadísticas y datos de demostración | — |
-| `cuentas` | Autenticación y roles | `Usuario` |
-| `catalogo` | Datos de referencia | `Carrera`, `Habilidad` |
-| `estudiantes` | Perfil, CV y descarga protegida | `PerfilEstudiante` |
-| `empresas` | Perfil y panel de empresa | `Empresa` |
-| `vacantes` | Listado, filtros, detalle y favoritos | `Vacante`, `Favorito` |
-| `postulaciones` | Postulaciones y estados | `Postulacion` |
+| Google reCAPTCHA | Distinguir personas de robots | `servicios/recaptcha.py` |
+| OpenStreetMap (Nominatim y Leaflet) | Coordenadas y mapa de cada vacante | `servicios/geocodificacion.py`, `static/js/mapa.js` |
+| Resend | Correos de cambio de estado | `servicios/correo.py` |
+| PostgreSQL (Neon, Supabase o Render) | Base de datos persistente | `DATABASE_URL` |
 
-Relaciones: `Usuario` 1:1 `PerfilEstudiante` y 1:1 `Empresa`; `Empresa` 1:N `Vacante`; `Vacante` N:M `Habilidad` y N:M `Carrera`; `PerfilEstudiante` N:M `Habilidad`; `Favorito` y `Postulacion` unen estudiante y vacante con restricción de unicidad.
+## Servicios web propios (API REST)
 
-## Seguridad
+Documentación interactiva en **`/api/v1/docs/`** y esquema OpenAPI en `/api/v1/schema/`.
 
-- Contraseñas con hash de Django y validación de contraseñas débiles.
-- Protección CSRF en todos los formularios; acciones que modifican datos solo por POST.
-- Autorización por rol (`rol_requerido`) y comprobación de propiedad (una empresa solo gestiona sus vacantes y candidatos).
-- El registro público no permite crear administradores.
-- Toda vacante nueva o editada pasa por aprobación de la UTC; las empresas también.
-- CV: validación de extensión, tamaño (5 MB) y firma real del PDF; nombre aleatorio; se descarga solo mediante una vista con permisos (dueño, administrador o empresa a la que se postuló).
-- Secretos por variables de entorno; `.env` y la base de datos están en `.gitignore`.
-- En producción: HTTPS forzado, cookies seguras y `SECRET_KEY` obligatoria.
+| Método y ruta | Acceso | Descripción |
+|---|---|---|
+| `GET /api/v1/vacantes/` | Público | Listado paginado con filtros (`q`, `carrera`, `empresa`, `modalidad`, `ubicacion`, `tipo`, `experiencia`, `fecha`) |
+| `GET /api/v1/vacantes/{id}/` | Público | Detalle de una vacante |
+| `GET /api/v1/carreras/`, `/habilidades/` | Público | Catálogos |
+| `POST /api/v1/token/` | Público | Obtiene un token con usuario y contraseña |
+| `POST /api/v1/vacantes/{id}/postular/` | Estudiante | Postularse |
+| `GET /api/v1/mis-postulaciones/` | Estudiante | Postulaciones propias |
+| `GET /api/v1/estadisticas/` | Administrador | Totales por estado |
+
+Ejemplo: `curl -H "Authorization: Token TU_TOKEN" http://127.0.0.1:8000/api/v1/mis-postulaciones/`
+
+## Arquitectura, metodología y pruebas
+
+Ver `docs/ARQUITECTURA.md` (capas y patrones), `docs/METODOLOGIA_AGIL.md` (backlog y sprints) y `docs/GUIA_DE_CAPTURAS.md`.
 
 ## Ejecutar en local (Windows)
 
     python -m venv venv
     venv\Scripts\Activate.ps1
-    pip install -r requirements.txt
+    pip install -r requirements-dev.txt
     python manage.py migrate
     python manage.py poblar_demo --usuarios
     python manage.py runserver
 
-Abre http://127.0.0.1:8000/. Cuentas demo (contraseña por defecto `ConectaUTC2026!`, o la de `--password` / `DEMO_PASSWORD`):
-
-| Usuario | Rol |
-|---|---|
-| `estudiante_demo` | Estudiante |
-| `empresa_demo` | Empresa (aprobada) |
-| `admin_utc` | Administrador UTC (también entra a `/admin/`) |
-
-`poblar_demo` es idempotente. Sin `--usuarios` solo carga carreras, habilidades, empresas y vacantes. Cambia o elimina las cuentas demo antes de usar datos reales.
-
-Para crear tu propio administrador: `python manage.py createsuperuser`.
+Abre http://127.0.0.1:8000/. Cuentas demo (contraseña `ConectaUTC2026!` o la de `DEMO_PASSWORD`): `estudiante_demo`, `empresa_demo` y `admin_utc`.
+`poblar_demo` no pisa los cambios ya hechos; usa `--restablecer` para volver a los valores de ejemplo.
 
 ## Pruebas
 
     python manage.py test
+    coverage run manage.py test
+    coverage report
+
+140 pruebas, cobertura superior al 90 %. Los servicios externos se simulan.
+
+## Variables de entorno
+
+| Variable | Uso |
+|---|---|
+| `SECRET_KEY` | Obligatoria con `DEBUG=False` |
+| `DEBUG` | `False` en producción |
+| `DATABASE_URL` | PostgreSQL (ej. `postgres://usuario:clave@host/db?sslmode=require`); sin ella se usa SQLite |
+| `DEMO_PASSWORD` | Contraseña de las cuentas demo |
+| `RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY` | reCAPTCHA v2 (sin claves, el captcha se desactiva) |
+| `RESEND_API_KEY`, `CORREO_REMITENTE` | Correos (sin clave, no se envían) |
 
 ## Despliegue en Render
 
@@ -77,12 +95,9 @@ Para crear tu propio administrador: `python manage.py createsuperuser`.
 |---|---|
 | Build Command | `pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate && python manage.py poblar_demo --usuarios` |
 | Start Command | `gunicorn config.wsgi:application` |
-| `SECRET_KEY` | cadena aleatoria larga |
-| `DEBUG` | `False` |
-| `DEMO_PASSWORD` | contraseña de las cuentas demo |
 
-Render define `RENDER_EXTERNAL_HOSTNAME`, que `settings.py` agrega a `ALLOWED_HOSTS` y a `CSRF_TRUSTED_ORIGINS`. El disco del plan gratuito es efímero: la base SQLite y los CV subidos se pierden al reiniciar, por eso el build vuelve a migrar y poblar los datos.
+El disco de Render es efímero: por eso los datos viven en PostgreSQL y los CV en la base de datos.
 
-## Flujo de trabajo (GitHub Flow)
+## Flujo de trabajo
 
-Rama `main` estable y ramas `feature/*` integradas mediante pull requests. Mensajes de commit con Conventional Commits (`feat:`, `fix:`, `docs:`, `style:`, `test:`, `chore:`).
+GitHub Flow: `main` estable y ramas `feature/*`, `fix/*` y `test/*` integradas con pull requests. Mensajes con Conventional Commits.
