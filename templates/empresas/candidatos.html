@@ -15,7 +15,7 @@
                     <td>{{ e.carrera|default:"—" }}<div class="small text-muted">{% if e.es_egresado %}Egresado{% elif e.cuatrimestre %}{{ e.cuatrimestre }}.º cuatrimestre{% endif %}</div></td>
                     <td>{% for h in e.habilidades.all|slice:":4" %}<span class="badge text-bg-light border me-1">{{ h.nombre }}</span>{% endfor %}</td>
                     <td class="small">{{ e.usuario.email }}<br>{{ e.telefono }}</td>
-                    <td>{% if e.cv %}<a href="{% url 'estudiantes:descargar_cv' e.pk %}" target="_blank" rel="noopener">Ver CV</a>{% else %}—{% endif %}</td>
+                    <td>{% if e.tiene_cv %}<a href="{% url 'estudiantes:descargar_cv' e.pk %}" target="_blank" rel="noopener">Ver CV</a>{% else %}—{% endif %}</td>
                     <td>
                         <form method="post" action="{% url 'empresas:cambiar_estado' p.pk %}" class="d-flex gap-1">
                             {% csrf_token %}

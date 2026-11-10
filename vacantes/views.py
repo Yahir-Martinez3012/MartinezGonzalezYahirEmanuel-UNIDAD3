@@ -9,6 +9,7 @@ from cuentas.decorators import rol_requerido
 from cuentas.models import Usuario
 from estudiantes.models import PerfilEstudiante
 from postulaciones.models import Postulacion
+from postulaciones.servicios import PostulacionNoPermitida, postular as registrar_postulacion
 
 from .forms import VacanteFiltroForm
 from .models import Favorito, Vacante
@@ -64,10 +65,11 @@ def detalle(request, pk):
 def postular(request, pk):
     vacante = get_object_or_404(Vacante.objects.abiertas(), pk=pk)
     perfil = PerfilEstudiante.para(request.user)
-    if not perfil.esta_completo or not perfil.tiene_cv:
-        messages.warning(request, 'Completa tu perfil (nombre y carrera) y sube tu CV en PDF para postularte.')
+    try:
+        _, creada = registrar_postulacion(perfil, vacante)
+    except PostulacionNoPermitida as error:
+        messages.warning(request, str(error))
         return redirect('estudiantes:editar_perfil')
-    _, creada = Postulacion.objects.get_or_create(estudiante=perfil, vacante=vacante)
     if creada:
         messages.success(request, f'¡Te postulaste a «{vacante.titulo}»! Puedes seguir el estado en tu perfil.')
     else:

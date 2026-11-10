@@ -46,6 +46,7 @@ def crear_vacante(request):
         vacante.estado = Vacante.Estado.PENDIENTE      # siempre inicia pendiente: la aprueba la UTC
         vacante.save()
         form.save_m2m()
+        vacante.actualizar_coordenadas()          # servicio externo: OpenStreetMap / Nominatim
         messages.success(request, 'Vacante creada. Se publicará cuando un administrador de la UTC la apruebe.')
         return redirect('empresas:panel')
     return render(request, 'empresas/vacante_form.html', {'form': form, 'titulo': 'Nueva vacante'})
@@ -61,6 +62,8 @@ def editar_vacante(request, pk):
         vacante.estado = Vacante.Estado.PENDIENTE      # todo cambio vuelve a revisión
         vacante.save()
         form.save_m2m()
+        if {'ubicacion', 'modalidad'} & set(form.changed_data):      # solo se vuelve a consultar si cambió el lugar
+            vacante.actualizar_coordenadas()
         messages.success(request, 'Vacante actualizada. Volverá a publicarse cuando la UTC la apruebe.')
         return redirect('empresas:panel')
     return render(request, 'empresas/vacante_form.html', {'form': form, 'titulo': 'Editar vacante'})

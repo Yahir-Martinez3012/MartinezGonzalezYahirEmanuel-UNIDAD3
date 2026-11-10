@@ -26,3 +26,4 @@
 .btn-favorito { position: relative; z-index: 2; }
 .stat-num { font-size: 2rem; font-weight: 700; color: var(--utc-primary); }
 @media (max-width: 575.98px) { .checks-lista { columns: 1; } .hero { padding: 3rem 0; } }
+.mapa-vacante { height: 300px; width: 100%; z-index: 0; }
